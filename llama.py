@@ -126,7 +126,7 @@ def llama_eval(model, testenc, dev):
     model.config.use_cache = use_cache
 
 # loading quantized checkpoint
-def load_quant(model, checkpoint, wbits, include_sparse, topX):
+def load_quant(model, dtype, checkpoint, wbits, include_sparse, topX):
     if "xgen" in checkpoint or "opt" in checkpoint or ("vicuna" in checkpoint and "v1.3" in checkpoint) or "llama-2" in checkpoint:
         # TODO: this is a hacky solution, will be preperly implemented after all the model checkpoints are updated with
         # the new packing scheme that includes the non-linear weights
@@ -135,7 +135,7 @@ def load_quant(model, checkpoint, wbits, include_sparse, topX):
         model = AutoModelForCausalLM.from_config(config)
     else:
         from transformers import LlamaForCausalLM
-        model = LlamaForCausalLM.from_pretrained(model, torch_dtype='auto')
+        model = LlamaForCausalLM.from_pretrained(model, torch_dtype=dtype)
     model = model.eval()
     layers = find_layers(model)
 
@@ -278,10 +278,17 @@ if __name__ == '__main__':
         '--num_dense_channels', type=int, default=10,
         help='Number of dense channel used for hybrid kernel.'
     )
-
+    parser.add_argument(
+        '--dtype', type=str, default='auto',
+        help='Torch dtype'
+    )
     DEV = torch.device('cuda:0')
 
     args = parser.parse_args()
+
+    dtype = args.dtype
+    if dtype != 'auto':
+        dtype = getattr(torch, dtype)
 
     if type(args.load) is not str:
         args.load = args.load.as_posix()
@@ -290,6 +297,7 @@ if __name__ == '__main__':
         print(args.model)
         model = load_quant(
             args.model,
+            dtype,
             args.load,
             args.wbits,
             args.include_sparse,
