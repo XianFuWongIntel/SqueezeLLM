@@ -14,7 +14,7 @@ from squeezellm.model_parse import (
     get_norm,
 )
 
-def get_model(model):
+def get_model(model, dtype):
     import torch
     def skip(*args, **kwargs):
         pass
@@ -22,7 +22,7 @@ def get_model(model):
     torch.nn.init.uniform_ = skip
     torch.nn.init.normal_ = skip
     from transformers import AutoModelForCausalLM
-    model = AutoModelForCausalLM.from_pretrained(model)
+    model = AutoModelForCausalLM.from_pretrained(model, torch_dtype=dtype)
     model.seqlen = 2048
     return model
 
@@ -305,7 +305,7 @@ if __name__ == '__main__':
             args.num_dense_channels,
         )
     else:
-        model = get_model(args.model)
+        model = get_model(args.model, dtype)
         model.eval()
 
     dataloader, testloader = get_loaders(
