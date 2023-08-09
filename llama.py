@@ -77,11 +77,12 @@ def llama_eval(model, testenc, dev):
     outs = torch.zeros_like(inps)
     attention_mask = cache['attention_mask']
     position_ids = cache.get('position_ids')
+    times = []
 
     for i in range(len(layers)):
-        print("Layer", i)
+        print("Layer", i, end=" : ", flush=True)
         layer = layers[i].to(dev)
-
+        tick = time.time()
         for j in range(nsamples):
             if model_type == 'opt':
                 outs[j] = layer(
@@ -95,6 +96,8 @@ def llama_eval(model, testenc, dev):
                     attention_mask=attention_mask, 
                     position_ids=position_ids,
                 )[0]
+        times.append(time.time() - tick)
+        print(times[-1])
         layers[i] = layer.cpu()
         del layer
         torch.cuda.empty_cache()
@@ -121,7 +124,9 @@ def llama_eval(model, testenc, dev):
         neg_log_likelihood = loss.float() * model.seqlen
         nlls.append(neg_log_likelihood)
     ppl = torch.exp(torch.stack(nlls).sum() / (nsamples * model.seqlen))
-    print(ppl.item())
+    print('PPL:', ppl.item())
+    print('Total time:', np.sum(times))
+    print('Median:', np.median(times))
 
     model.config.use_cache = use_cache
 
