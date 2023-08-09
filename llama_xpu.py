@@ -271,10 +271,10 @@ if __name__ == '__main__':
         '--nsamples', type=int, default=128,
         help='Number of calibration data samples.'
     )
-    # parser.add_argument(
-    #     '--torch_profile', action='store_true',
-    #     help='Use XPU profiling tool for timing runs.'
-    # )
+    parser.add_argument(
+        '--torch_profile', action='store_true',
+        help='Use XPU profiling tool for timing runs.'
+    )
     parser.add_argument(
         '--include_sparse', action='store_true',
         help='Whether loaded checkpoint has sparse matrix.'
@@ -325,18 +325,13 @@ if __name__ == '__main__':
         if args.benchmark:
             input_ids = next(iter(dataloader))[0][:, :args.benchmark]
 
-            # if args.torch_profile:
-            #     from torch.profiler import profile, record_function, ProfilerActivity
-            #     with torch.profiler.profile(
-            #     activities=[
-            #        torch.profiler.ProfilerActivity.CPU,
-            #        torch.profiler.ProfilerActivity.XPU,
-            #     ]
-            #     ) as p:
-            #         benchmark(model, input_ids, check=args.check)
-            #     print(p.key_averages().table(sort_by="self_xpu_time_total", row_limit=-1))
-            # else:
-            benchmark(model, input_ids, check=args.check)
+            if args.torch_profile:
+                from torch.profiler import profile, record_function, ProfilerActivity
+                with torch.autograd.profiler_legacy.profile(use_xpu=True) as p:
+                    benchmark(model, input_ids, check=args.check)
+                print(p.key_averages().table(sort_by="self_xpu_time_total", row_limit=-1))
+            else:
+                benchmark(model, input_ids, check=args.check)
 
     if args.eval:
         datasets = ['wikitext2', 'c4']
