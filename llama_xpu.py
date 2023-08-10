@@ -99,6 +99,7 @@ def llama_eval(model, testenc, dev):
                 )[0]
         times.append(time.time() - tick)
         print(times[-1])
+        layer.to('cpu')
         del layer
         torch.xpu.empty_cache()
         inps, outs = outs, inps
